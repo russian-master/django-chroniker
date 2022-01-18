@@ -480,7 +480,8 @@ def make_aware(dt, tz):
 
 def localtime(dt):
     dt = make_aware(dt, settings.TIME_ZONE)
-    return dt
+    # convert datetime to current timezone
+    return timezone.localtime(dt)
 
 
 def write_lock(lock_file):
