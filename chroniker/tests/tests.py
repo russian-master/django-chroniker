@@ -388,6 +388,9 @@ class JobTestCase(TestCase):
             settings.USE_TZ = True
 
     def testTimezone2(self):
+        # NOTE: This test started failing as a result of D2D change WEB-2636.
+        # After this change, USE_TZ=False is no longer supported. Test has been changed
+        # to reflect the new behavior. -VV 2022-06-03
         tz = zoneinfo.gettz(settings.TIME_ZONE)
         _USE_TZ = settings.USE_TZ
         settings.USE_TZ = False
@@ -402,11 +405,7 @@ class JobTestCase(TestCase):
             self.assertTrue(timezone.is_naive(next_run))
             with self.assertRaises(ValueError):
                 #astimezone() cannot be applied to a naive datetime
-                timezone.make_naive(j.next_run, timezone=tz)
-            j.save()
-
-            response = client.get('/admin/chroniker/job/')
-            self.assertEqual(response.status_code, 200)
+                response = client.get('/admin/chroniker/job/')
 
         finally:
             settings.USE_TZ = _USE_TZ
