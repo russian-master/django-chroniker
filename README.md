@@ -19,13 +19,19 @@ This is a fork of Weston Nielson's [Chronograph](https://bitbucket.org/wnielson/
 How to Make New Release (D2D Edition)
 -------------------------------------
 
-First determine the new version. It should follow the pattern of incrementing the current version in webApp's `requirements_base.txt` by one.
-For example, if the current version (found after the `@` in the url) is `django-chroniker-0.6.5+d2d.001`,
-then the new version will be `django-chroniker-0.6.5+d2d.002`.
+Update version in `chroniker/__init__.py` by changing the last number to be one greater. Example, change
 
-Go to https://github.com/Draft2Digital/django-chroniker/releases and click Draft a new release.
+```__version__ = "v0.6.5+d2d.002"```
 
-Click Choose a tag and put in the version. Publish the release. In projects that use this, update the version pointed at to be the new version.
+to
+
+```__version__ = "v0.6.5+d2d.003"```
+
+Commit and push changes, then go to https://github.com/Draft2Digital/django-chroniker/releases and click Draft a new release.
+
+Click Choose a tag and put in the same version as is the value in the `__version__` variable (e.g. `v0.6.5+d2d.004`). Publish the release.
+
+In projects that use this, update the version pointed at to be the new version.
 
 Features
 --------
