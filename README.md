@@ -16,6 +16,17 @@ Then, you can create, update and delete jobs through Django's admin.
 
 This is a fork of Weston Nielson's [Chronograph](https://bitbucket.org/wnielson/django-chronograph/) project.
 
+How to Make New Release (D2D Edition)
+-------------------------------------
+
+First determine the new version. It should follow the pattern of incrementing the current version in webApp's `requirements_base.txt` by one.
+For example, if the current version (found after the `@` in the url) is `django-chroniker-0.6.5+d2d.001`,
+then the new version will be `django-chroniker-0.6.5+d2d.002`.
+
+Go to https://github.com/Draft2Digital/django-chroniker/releases and click Draft a new release.
+
+Click Choose a tag and put in the version. Publish the release. In projects that use this, update the version pointed at to be the new version.
+
 Features
 --------
 
