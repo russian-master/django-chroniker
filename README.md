@@ -21,15 +21,15 @@ How to Make New Release (D2D Edition)
 
 Update version in `chroniker/__init__.py` by changing the last number to be one greater. Example, change
 
-```__version__ = "v0.6.5+d2d.002"```
+```__version__ = "v1.0.22+d2d.002"```
 
 to
 
-```__version__ = "v0.6.5+d2d.003"```
+```__version__ = "v1.0.22+d2d.003"```
 
 Commit and push changes, then go to https://github.com/Draft2Digital/django-chroniker/releases and click Draft a new release.
 
-Click Choose a tag and put in the same version as is the value in the `__version__` variable (e.g. `v0.6.5+d2d.004`). Publish the release.
+Click Choose a tag and put in the same version as is the value in the `__version__` variable (e.g. `v1.0.22+d2d.004`). Publish the release.
 
 In projects that use this, update the version pointed at to be the new version.
 
