@@ -11,10 +11,10 @@ from django.urls import reverse
 try:
     # force_unicode was deprecated in Django 1.5.
     from django.utils.encoding import force_unicode as force_str
-    from django.utils.encoding import smart_unicode as smart_text
+    from django.utils.encoding import smart_unicode as smart_str
 except ImportError:
     from django.utils.encoding import force_str
-    from django.utils.encoding import smart_text
+    from django.utils.encoding import smart_str
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
@@ -112,7 +112,7 @@ class VerboseManyToManyRawIdWidget(ManyToManyRawIdWidget):
         for v in values:
             try:
                 obj = self.remote_field.model._default_manager.using(self.db).get(**{key: v})
-                x = smart_text(obj)
+                x = smart_str(obj)
                 change_url = reverse("admin:%s_%s_change" % (obj._meta.app_label, obj._meta.object_name.lower()), args=(obj.pk,))
                 str_values += ['<strong><a href="%s" target="_blank">%s</a></strong>' \
                     % (change_url, escape(x))]
