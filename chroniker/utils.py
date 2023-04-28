@@ -5,6 +5,7 @@ import os
 import signal
 import sys
 import time
+import chardet
 import warnings
 from datetime import timedelta
 from importlib import import_module
@@ -78,7 +79,7 @@ class TeeFile(StringIO):
     while still be directed to a second file object, such as sys.stdout.
     """
 
-    def __init__(self, file, auto_flush=False, queue=None, local=True): # pylint: disable=W0622
+    def __init__(self, file, auto_flush=False, queue=None, local=True, encoding='utf-8'): # pylint: disable=W0622
         super().__init__()
         self.file = file
         self.auto_flush = auto_flush
@@ -92,16 +93,13 @@ class TeeFile(StringIO):
         self.local = local
 
     def write(self, s):
-        try:
-            #import chardet
-            #encoding_opinion = chardet.detect(s)
-            #encoding = encoding_opinion['encoding']
-            #TODO:fix? not stripping out non-ascii characters result in error
-            #'ascii' codec can't encode character ? in position ?: ordinal not in range(128)
-            s = ''.join(_ for _ in s if ord(_) < 128)
-            #s = s.encode(encoding, 'ignore')
-        except ImportError:
-            pass
+        #encoding_opinion = chardet.detect(s)
+        #encoding = encoding_opinion['encoding']
+        #TODO:fix? not stripping out non-ascii characters result in error
+        #'ascii' codec can't encode character ? in position ?: ordinal not in range(128)
+        #s = ''.join(_ for _ in s if ord(_) < 128)
+        s = s.encode(self.encoding, 'ignore')
+        
         self.length += len(s)
         self.file.write(s)
         if self.local:
