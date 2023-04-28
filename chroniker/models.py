@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 import traceback
+import io
 from datetime import datetime, timedelta
 
 import threading
@@ -959,8 +960,14 @@ class Job(models.Model):
 
         try:
             # Redirect output so that we can log and easily check for errors.
-            stdout = utils.TeeFile(sys.stdout, auto_flush=True, queue=stdout_queue, local=self.log_stdout)
-            stderr = utils.TeeFile(sys.stderr, auto_flush=True, queue=stderr_queue, local=self.log_stderr)
+            #stdout = utils.TeeFile(sys.stdout, auto_flush=True, queue=stdout_queue, local=self.log_stdout)
+            #stderr = utils.TeeFile(sys.stderr, auto_flush=True, queue=stderr_queue, local=self.log_stderr)
+            # Alex
+            sys_stdout = io.TextIOWrapper(io.BytesIO(), encoding='utf-8')
+            sys_stderr = io.TextIOWrapper(io.BytesIO(), encoding='utf-8')
+            stdout = utils.TeeFile(sys_stdout, auto_flush=True, queue=stdout_queue, local=self.log_stdout)
+            stderr = utils.TeeFile(sys_stderr, auto_flush=True, queue=stderr_queue, local=self.log_stderr)
+
             ostdout = sys.stdout
             ostderr = sys.stderr
             sys.stdout = stdout
@@ -1060,6 +1067,12 @@ class Job(models.Model):
                 t = loader.get_template('chroniker/error_message.txt')
                 ctx = {'exception': str(e), 'traceback': ['\n'.join(traceback.format_exception(*sys.exc_info()))]}
                 print(t.render(ctx), file=sys.stderr)
+            
+            # Alex
+            sys_stdout.seek(0)
+            stdout_str = sys_stdout.read()
+            sys_stderr.seek(0)
+            stderr_str = sys_stderr.read()
 
         finally:
             if original_pid != os.getpid():
