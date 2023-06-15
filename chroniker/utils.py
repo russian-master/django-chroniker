@@ -98,7 +98,7 @@ class TeeFile(StringIO):
         #TODO:fix? not stripping out non-ascii characters result in error
         #'ascii' codec can't encode character ? in position ?: ordinal not in range(128)
         #s = ''.join(_ for _ in s if ord(_) < 128)
-        s = s.encode(self.encoding, 'ignore')
+        s = s.encode('utf-8', 'ignore')
         
         self.length += len(s)
         self.file.write(s)
