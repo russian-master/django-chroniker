@@ -46,7 +46,7 @@ def kill_stalled_processes(dryrun=True):
                 else:
                     print('PID not cron.')
             else:
-                print('PID dead.')
+                print('PID dead.', pid)
         except psutil.NoSuchProcess:
             print('PID does not exist.')
 
