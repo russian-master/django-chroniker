@@ -86,7 +86,6 @@ class TeeFile(StringIO):
         self.length = 0
         self.queue = queue
         self.queue_buffer = []
-        self.encoding = 'utf-8'
 
         # If False, tracks length, but doesn't store content locally.
         # Useful if you want to keep track of whether or not data was written
@@ -99,9 +98,8 @@ class TeeFile(StringIO):
         #TODO:fix? not stripping out non-ascii characters result in error
         #'ascii' codec can't encode character ? in position ?: ordinal not in range(128)
         #s = ''.join(_ for _ in s if ord(_) < 128)
-        print(self.encoding)
+        s = s.encode('utf-8', 'ignore')
         print(s)
-        s = s.encode(self.encoding, 'ignore')
         
         self.length += len(s)
         self.file.write(s)
