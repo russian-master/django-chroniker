@@ -122,6 +122,7 @@ def run_cron(jobs=None, **kwargs):
         if _settings.CHRONIKER_USE_PID:
             pid_fn = _settings.CHRONIKER_PID_FN
             pid = str(os.getpid())
+            """
             any_running = Job.objects.all_running().count()
             if not any_running:
                 # If no jobs are running, then even if the PID file exists,
@@ -139,6 +140,7 @@ def run_cron(jobs=None, **kwargs):
                     pass
                 except TypeError:
                     pass
+            """
             open(pid_fn, 'w').write(pid)
             clear_pid = True
 
