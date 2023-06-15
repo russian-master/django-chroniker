@@ -1005,6 +1005,7 @@ class Job(models.Model):
             if heartbeat:
                 heartbeat.start()
             try:
+                print("Calling command '%s'" % self.command)
                 logger.debug("Calling command '%s'", self.command)
                 if self.raw_command and not getattr(settings, 'CHRONIKER_DISABLE_RAW_COMMAND', False):
                     completed_process = subprocess.run(
@@ -1020,11 +1021,13 @@ class Job(models.Model):
                         stderr_str = _stderr_str
                 else:
                     logger.debug('command: %s %s %s', self.command, args, options)
+                    print('command: %s %s %s' % (self.command, args, options))
                     call_command(self.command, *args, **options)
                 logger.debug("Command '%s' completed", self.command)
                 if original_pid != os.getpid():
                     return
             except Exception as e:
+                print(str(e))
                 if original_pid != os.getpid():
                     return
                 # The command failed to run; log the exception
