@@ -940,6 +940,11 @@ class Job(models.Model):
         for name, value in kwargs.items():
             setattr(self, name, value)
 
+    def get_pid_file(self):
+        # Use both the primary key and command to create a unique PID file for each job
+        sanitized_command = self.command.replace('/', '_').replace(' ', '_').replace('-','')
+        return f"/tmp/chroniker-{self.pk}-{sanitized_command}.pid"
+
     def handle_run(self, update_heartbeat=True, stdout_queue=None, stderr_queue=None, *args, **kwargs):
         """
         This method implements the code to actually run a ``Job``.  This is
@@ -956,6 +961,12 @@ class Job(models.Model):
         stderr_str = ''
 
         original_pid = os.getpid()
+        # Alex
+        pid_file = self.get_pid_file()
+        if os.path.exists(pid_file):
+            raise Exception(f"PID file {pid_file} already exists, exiting")
+        with open(pid_file, 'w') as f:
+            f.write(str(os.getpid()))
 
         try:
             # Redirect output so that we can log and easily check for errors.
@@ -1075,6 +1086,11 @@ class Job(models.Model):
             #stderr_str = sys_stderr.read()
 
         finally:
+            try:
+                os.remove(pid_file)
+            except FileNotFoundError:
+                pass
+            
             if original_pid != os.getpid():
                 # We're a clone of the parent job, so exit immediately
                 # so we don't conflict.
