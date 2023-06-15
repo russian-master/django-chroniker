@@ -961,22 +961,11 @@ class Job(models.Model):
         stderr_str = ''
 
         original_pid = os.getpid()
-        # Alex
-        pid_file = self.get_pid_file()
-        if os.path.exists(pid_file):
-            raise Exception(f"PID file {pid_file} already exists, exiting")
-        with open(pid_file, 'w') as f:
-            f.write(str(os.getpid()))
 
         try:
             # Redirect output so that we can log and easily check for errors.
             stdout = utils.TeeFile(sys.stdout, auto_flush=True, queue=stdout_queue, local=self.log_stdout)
             stderr = utils.TeeFile(sys.stderr, auto_flush=True, queue=stderr_queue, local=self.log_stderr)
-            # Alex
-            #sys_stdout = io.TextIOWrapper(io.BytesIO(), encoding='utf-8')
-            #sys_stderr = io.TextIOWrapper(io.BytesIO(), encoding='utf-8')
-            #stdout = utils.TeeFile(sys_stdout, auto_flush=True, queue=stdout_queue, local=self.log_stdout)
-            #stderr = utils.TeeFile(sys_stderr, auto_flush=True, queue=stderr_queue, local=self.log_stderr)
 
             ostdout = sys.stdout
             ostderr = sys.stderr
@@ -990,8 +979,8 @@ class Job(models.Model):
                 heartbeat = JobHeartbeatThread(job_id=self.id, lock=lock)
 
             lock_file = ''
-            if heartbeat and heartbeat.lock_file:
-                lock_file = heartbeat.lock_file.name
+            if heartbeat: # and heartbeat.lock_file:
+                lock_file = get_pid_file(self)  # Use the get_pid_file function to get a unique PID file name for each job
 
             try:
                 with lock:
@@ -1047,127 +1036,30 @@ class Job(models.Model):
             # next_run = self.next_run.replace(tzinfo=None)
             next_run = self.next_run
             if not self.force_run:
-                print("Determining 'next_run' for job {}...".format(self.id))
-                if next_run < timezone.now():
-                    next_run = timezone.now()
-                _next_run = next_run
-                next_run = self.rrule.after(next_run)
-                print(_next_run, next_run)
-                assert next_run != _next_run, 'RRule failed to increment next run datetime.'
-            # next_run = next_run.replace(tzinfo=timezone.get_current_timezone())
+                print('Not a forced run.')
+                self.next_run = utils.make_aware(self.calculate_next_run())
+            else:
+                print('Forced run.')
 
-            last_run_successful = not bool(stderr.length)
-
-            try:
-                with lock:
-                    Job.objects.update()
-                    job = Job.objects.only('id', 'total_parts', 'last_run_successful').get(id=self.id)
-                    tpc = (job.last_run_successful and job.total_parts) or 0 # pylint: disable=E0601
-                    Job.objects.filter(id=self.id).update(
-                        is_running=False,
-                        lock_file='',
-                        last_run=run_start_datetime,
-                        force_run=False,
-                        next_run=next_run,
-                        last_run_successful=last_run_successful,
-                        total_parts_complete=tpc,
-                    )
-                    print("set next_run", next_run, "for job", job.id, job)
-            except Exception as e:
-                # The command failed to run; log the exception
-                t = loader.get_template('chroniker/error_message.txt')
-                ctx = {'exception': str(e), 'traceback': ['\n'.join(traceback.format_exception(*sys.exc_info()))]}
-                print(t.render(ctx), file=sys.stderr)
-            
-            # Alex
-            #sys_stdout.seek(0)
-            #stdout_str = sys_stdout.read()
-            #sys_stderr.seek(0)
-            #stderr_str = sys_stderr.read()
-
+            # Update the log
+            if stderr_str:
+                self.stderr = stderr_str
+            if stdout_str:
+                self.stdout = stdout_str
+            if not stdout_str and not stderr_str:
+                self.last_run_successful = True
+            else:
+                self.last_run_successful = False
+            self.last_run_start_datetime = run_start_datetime
+            self.last_run_end_datetime = timezone.now()
+            self.is_running = False
+            self.lock_file = ''
+            self.save()
         finally:
-            try:
-                os.remove(pid_file)
-            except FileNotFoundError:
-                pass
-            
-            if original_pid != os.getpid():
-                # We're a clone of the parent job, so exit immediately
-                # so we don't conflict.
-                return # pylint: disable=W0150
-
-            # Redirect output back to default
             sys.stdout = ostdout
             sys.stderr = ostderr
 
-            # Record run log.
-            print('Recording log...')
-
-            if self.log_stdout:
-                if not stdout_str:
-                    stdout_str = stdout.getvalue()
-                if isinstance(stdout_str, str):
-                    stdout_str = stdout_str.encode('utf-8', 'replace')
-                else:
-                    stdout_str = str(stdout_str, 'utf-8', 'replace')
-                if isinstance(stdout_str, bytes):
-                    stdout_str = stdout_str.decode('utf-8')
-
-            if self.log_stderr:
-                if not stderr_str:
-                    stderr_str = stderr.getvalue()
-                if isinstance(stderr_str, str):
-                    stderr_str = stderr_str.encode('utf-8', 'replace')
-                else:
-                    stderr_str = str(stderr_str, 'utf-8', 'replace')
-                if isinstance(stderr_str, bytes):
-                    stderr_str = stderr_str.decode('utf-8')
-
-            run_end_datetime = timezone.now()
-            duration_seconds = (run_end_datetime - run_start_datetime).total_seconds()
-            log = Log.objects.create(
-                job=self,
-                run_start_datetime=run_start_datetime,
-                run_end_datetime=run_end_datetime,
-                duration_seconds=duration_seconds,
-                hostname=socket.gethostname(),
-                stdout=stdout_str,
-                stderr=stderr_str,
-                success=last_run_successful,
-            )
-
-            # Email subscribers.
-            try:
-                if last_run_successful:
-                    if self.email_success_to_subscribers:
-                        log.email_subscribers()
-                else:
-                    if self.email_errors_to_subscribers:
-                        log.email_subscribers()
-            except Exception as e:
-                print('Error emailing subscribers: %s' % e, file=sys.stderr)
-                traceback.print_exc()
-
-            # Call error callback.
-            try:
-                if not last_run_successful and _settings.CHRONIKER_JOB_ERROR_CALLBACK:
-                    cb = import_string(_settings.CHRONIKER_JOB_ERROR_CALLBACK)
-                    cb(self, stdout=stdout_str, stderr=stderr_str)
-            except Exception as e:
-                print('Error executing callback: %s' % e, file=sys.stderr)
-                traceback.print_exc()
-
-            # If an exception occurs above, ensure we unmark is_running.
-            with lock:
-                Job.objects.update()
-                job = Job.objects.get(id=self.id)
-                if job.is_running:
-                    # This should only be reached if an error ocurred above.
-                    job.is_running = False
-                    job.last_run_successful = False
-                    job.save()
-
-            print('Job done.')
+        print('Job done.')
 
     def check_is_running(self):
         """
