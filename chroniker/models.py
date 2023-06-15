@@ -1061,6 +1061,7 @@ class Job(models.Model):
                         last_run_successful=last_run_successful,
                         total_parts_complete=tpc,
                     )
+                    print("set next_run", next_run, "for job", job.id, job)
             except Exception as e:
                 # The command failed to run; log the exception
                 t = loader.get_template('chroniker/error_message.txt')
