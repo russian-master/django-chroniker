@@ -124,7 +124,8 @@ class JobHeartbeatThread(threading.Thread):
     def __init__(self, job_id, lock, *args, **kwargs):
         self.job_id = job_id
         self.lock = lock
-        self.lock_file = tempfile.NamedTemporaryFile()
+        #self.lock_file = tempfile.NamedTemporaryFile()
+        self.lock_file = get_pid_file(self.job_id)
         self.original_pid = os.getpid()
         set_current_job(job_id)
         set_current_heartbeat(self)
@@ -406,6 +407,16 @@ class JobManager(models.Manager):
 
             create_log(job)
             #transaction.commit()
+
+
+def get_pid_file(job_id):
+    """
+    This function returns the path of the pid file for a given job id.
+    """
+    pid_dir = '/tmp'
+    pid_filename = f'chroniker-cron-{job_id}.pid'
+    pid_file_path = os.path.join(pid_dir, pid_filename)
+    return pid_file_path
 
 
 class Job(models.Model):
@@ -940,10 +951,6 @@ class Job(models.Model):
         for name, value in kwargs.items():
             setattr(self, name, value)
 
-    def get_pid_file(self):
-        # Use both the primary key and command to create a unique PID file for each job
-        sanitized_command = self.command.replace('/', '_').replace(' ', '_').replace('-','')
-        return f"/tmp/chroniker-{self.pk}-{sanitized_command}.pid"
 
     def handle_run(self, update_heartbeat=True, stdout_queue=None, stderr_queue=None, *args, **kwargs):
         """
@@ -980,7 +987,7 @@ class Job(models.Model):
 
             lock_file = ''
             if heartbeat: # and heartbeat.lock_file:
-                lock_file = get_pid_file(self)  # Use the get_pid_file function to get a unique PID file name for each job
+                lock_file = get_pid_file(self.id)  # Use the get_pid_file function to get a unique PID file name for each job
 
             try:
                 with lock:
